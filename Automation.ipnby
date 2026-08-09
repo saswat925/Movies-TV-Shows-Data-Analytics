@@ -1,0 +1,234 @@
+import pyodbc
+import logging
+from datetime import datetime
+
+
+# ============================================================
+# 1. SQL SERVER CONFIGURATION
+# ============================================================
+
+SERVER_NAME = r"LAPTOP-71G1NMQR\SQLEXPRESS"
+DATABASE_NAME = "OTT_DB"
+
+DRIVER = "ODBC Driver 18 for SQL Server"
+
+
+# ============================================================
+# 2. LOGGING
+# ============================================================
+
+logging.basicConfig(
+    filename=f"OTT_Automation_{datetime.now():%Y%m%d}.log",
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger()
+
+
+# ============================================================
+# 3. SQL SERVER CONNECTION
+# ============================================================
+
+def create_connection():
+
+    connection = pyodbc.connect(
+        f"DRIVER={{{DRIVER}}};"
+        f"SERVER={LAPTOP-71G1NMQR\SQLEXPRESS};"
+        f"DATABASE={OTT_DB};"
+        "Trusted_Connection=yes;"
+        "TrustServerCertificate=yes;"
+    )
+
+    return connection
+
+
+# ============================================================
+# 4. RUN MOVIES STORED PROCEDURE
+# ============================================================
+
+def load_movies(cursor):
+
+    logger.info("Starting Movies ETL...")
+
+    cursor.execute(
+        "EXEC dbo.usp_Load_Final_Movies"
+    )
+
+    logger.info(
+        "Movies stored procedure completed."
+    )
+
+
+# ============================================================
+# 5. RUN TV SHOWS STORED PROCEDURE
+# ============================================================
+
+def load_tvshows(cursor):
+
+    logger.info("Starting TV Shows ETL...")
+
+    cursor.execute(
+        "EXEC dbo.usp_Load_Final_TVShows"
+    )
+
+    logger.info(
+        "TV Shows stored procedure completed."
+    )
+
+
+# ============================================================
+# 6. VALIDATE FINAL TABLES
+# ============================================================
+
+def validate_data(cursor):
+
+    # Movies
+    cursor.execute(
+        "SELECT COUNT(*) FROM final_movies"
+    )
+
+    movies_count = cursor.fetchone()[0]
+
+    # TV Shows
+    cursor.execute(
+        "SELECT COUNT(*) FROM final_tvshows"
+    )
+
+    tvshows_count = cursor.fetchone()[0]
+
+    logger.info(
+        f"Final Movies rows: {movies_count}"
+    )
+
+    logger.info(
+        f"Final TV Shows rows: {tvshows_count}"
+    )
+
+    print(
+        f"Final Movies rows: {movies_count}"
+    )
+
+    print(
+        f"Final TV Shows rows: {tvshows_count}"
+    )
+
+    return movies_count, tvshows_count
+
+
+# ============================================================
+# 7. MAIN AUTOMATION
+# ============================================================
+
+def main():
+
+    start_time = datetime.now()
+
+    print("=" * 60)
+    print("OTT AUTOMATION STARTED")
+    print("=" * 60)
+
+    connection = None
+    cursor = None
+
+    try:
+
+        # Step 1: Connect SQL Server
+        print("\nConnecting to SQL Server...")
+
+        connection = create_connection()
+
+        cursor = connection.cursor()
+
+        print("SQL Server connection successful.")
+
+        logger.info(
+            "SQL Server connection successful."
+        )
+
+
+        # Step 2: Load Movies
+        print("\nRunning Movies stored procedure...")
+
+        load_movies(cursor)
+
+        connection.commit()
+
+
+        # Step 3: Load TV Shows
+        print(
+            "\nRunning TV Shows stored procedure..."
+        )
+
+        load_tvshows(cursor)
+
+        connection.commit()
+
+
+        # Step 4: Validate
+        print("\nValidating final tables...")
+
+        movies_count, tvshows_count = validate_data(
+            cursor
+        )
+
+
+        # Step 5: Success
+        end_time = datetime.now()
+
+        runtime = end_time - start_time
+
+        print("\n" + "=" * 60)
+        print("OTT AUTOMATION COMPLETED SUCCESSFULLY")
+        print("=" * 60)
+
+        print(
+            f"Movies: {movies_count}"
+        )
+
+        print(
+            f"TV Shows: {tvshows_count}"
+        )
+
+        print(
+            f"Runtime: {runtime}"
+        )
+
+        logger.info(
+            f"Automation completed successfully. "
+            f"Movies={movies_count}, "
+            f"TV Shows={tvshows_count}, "
+            f"Runtime={runtime}"
+        )
+
+
+    except Exception as error:
+
+        print("\nAUTOMATION FAILED")
+        print(error)
+
+        logger.exception(
+            "OTT automation failed."
+        )
+
+        if connection:
+            connection.rollback()
+
+
+    finally:
+
+        if cursor:
+            cursor.close()
+
+        if connection:
+            connection.close()
+
+        print("\nSQL Server connection closed.")
+
+
+# ============================================================
+# 8. START SCRIPT
+# ============================================================
+
+if __name__ == "__main__":
+    main()
